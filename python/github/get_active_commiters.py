@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 
 # Configuration and Variables
 access_token = ""
-organizations = ["slaclab", "slac-chef"]
+organizations = [""]
 csv_file = 'active_users.csv'
 
 # Initialize Github object
