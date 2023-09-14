@@ -6,11 +6,11 @@ import argparse
 
 # Configuration
 GITHUB_API_URL = "https://api.github.com"
-ORG_NAME = "slac-chef"  # Replace with the organization's name
+ORG_NAME = ""  # Replace with the organization's name
 # Replace with your personal access token
-GITHUB_TOKEN = "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"
+GITHUB_TOKEN = ""
 # Default output directory; can be overridden by arg
-OUTPUT_DIR = "/home/pestilence/repos/slac-chef"
+OUTPUT_DIR = ""
 
 # Setup logging
 logging.basicConfig(

@@ -1,6 +1,18 @@
 import csv
 import requests
 
+# Example usage:
+repo_list = [
+    {'owner': 'hashicorp', 'name': 'terraform-provider-aws'}
+]
+
+api_key = "MY_API_KEY_HERE"
+headers = {
+    "Authorization": f"Bearer {api_key}"
+}
+
+csv_file_path = "commits.csv"
+
 
 def get_all_commits(repo_owner, repo_name, headers):
     api_url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/commits"
@@ -39,19 +51,7 @@ def retrieve_commits_to_csv(repo_list, csv_file_path, headers):
                 commit_owner = commit['commit']['author']['name']
                 writer.writerow([f"{repo_owner}/{repo_name}", commit_sha,
                                 commit_message, commit_branch, commit_date, commit_owner])
-
-
-# Example usage:
-repo_list = [
-    {'owner': 'hashicorp', 'name': 'terraform-provider-aws'}
-]
-
-api_key = "MY_API_KEY_HERE"
-headers = {
-    "Authorization": f"Bearer {api_key}"
-}
-
-csv_file_path = "commits.csv"
+                
 
 retrieve_commits_to_csv(repo_list, csv_file_path, headers)
 
