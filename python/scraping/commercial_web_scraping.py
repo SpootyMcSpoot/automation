@@ -1,12 +1,16 @@
 import os
+import argparse
 from urllib import request, error
 from bs4 import BeautifulSoup
 from time import sleep
 import logging
 from tqdm import tqdm
 
-BASE_URL = 'https://www.retrojunk.com'
-DOWNLOAD_DIR = '/home/pestilence/striped/media/commercials'
+BASE_URL_RETRO = 'https://www.retrojunk.com'
+BASE_URL_ARCHIVE = 'https://archive.org/search?query=subject%3A%22'
+COUNTRY = 'japan'  # Change this as needed
+DOWNLOAD_DIR = os.path.join(
+    '/home/pestilence/striped/media/commercials', COUNTRY)
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.107 Safari/537.36'
 }
@@ -14,6 +18,11 @@ HEADERS = {
 # Initialize logging
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s - %(levelname)s - %(message)s')
+# Argument parsing
+parser = argparse.ArgumentParser(description='Scraper for commercials')
+parser.add_argument('--source', choices=['retrojunk', 'archive'],
+                    required=True, help='Specify the source website for scraping')
+args = parser.parse_args()
 
 
 def get_video_page_links(page_url):
@@ -35,7 +44,7 @@ def get_video_page_links(page_url):
         return [], None
 
     # Get all video page links
-    links = [BASE_URL + link.get('href')
+    links = [BASE_URL_RETRO + link.get('href')
              for link in soup.find_all('a', class_='title-link')]
 
     # Determine next page from the pagination list
@@ -43,7 +52,8 @@ def get_video_page_links(page_url):
     if current_page:
         try:
             next_page_num = int(current_page.text) + 1
-            next_page_url = BASE_URL + f'/commercials?page={next_page_num}'
+            next_page_url = BASE_URL_RETRO + \
+                f'/commercials?page={next_page_num}'
             logging.debug(
                 f"Next page determined using pagination list: {next_page_url}")
         except ValueError:
@@ -95,7 +105,7 @@ def get_aired_decade(soup):
 
 
 def scraper():
-    next_page_url = BASE_URL + '/commercials'
+    next_page_url = BASE_URL_RETRO + '/commercials'
 
     while next_page_url:
         links, next_page_url = get_video_page_links(next_page_url)
@@ -141,4 +151,8 @@ def scraper():
                     f"URLError while processing link {link}: {e.reason}")
 
 
-scraper()
+if __name__ == "__main__":
+    if args.source == "retrojunk":
+        scraper_retrojunk()
+    elif args.source == "archive":
+        scraper_archive()
