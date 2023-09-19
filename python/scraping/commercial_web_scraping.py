@@ -1,70 +1,158 @@
 import os
-import re
-import requests
+import argparse
+from urllib import request, error
 from bs4 import BeautifulSoup
 from time import sleep
 import logging
+from tqdm import tqdm
 
-BASE_URL = 'https://www.retrojunk.com/commercials'
-DOWNLOAD_DIR = '/path/to/your/directory/'
-
-headers = {
+BASE_URL_RETRO = 'https://www.retrojunk.com'
+BASE_URL_ARCHIVE = 'https://archive.org/search?query=subject%3A%22'
+COUNTRY = 'japan'  # Change this as needed
+DOWNLOAD_DIR = os.path.join(
+    '/home/pestilence/striped/media/commercials', COUNTRY)
+HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.107 Safari/537.36'
 }
 
 # Initialize logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
+logging.basicConfig(level=logging.DEBUG,
+                    format='%(asctime)s - %(levelname)s - %(message)s')
+# Argument parsing
+parser = argparse.ArgumentParser(description='Scraper for commercials')
+parser.add_argument('--source', choices=['retrojunk', 'archive'],
+                    required=True, help='Specify the source website for scraping')
+args = parser.parse_args()
 
 
-def get_video_page_links():
-    # Implement logic to get all links to video pages
-    pass
+def get_video_page_links(page_url):
+    logging.debug(f"Fetching content from URL: {page_url}")
+    req = request.Request(page_url, headers=HEADERS)
+
+    try:
+        response = request.urlopen(req)
+        html_content = response.read()
+        soup = BeautifulSoup(html_content, 'html.parser')
+        logging.debug("Successfully fetched and parsed the content.")
+    except error.HTTPError as e:
+        logging.error(
+            f"HTTPError while fetching content from {page_url}: {e.code} {e.reason}")
+        return [], None
+    except error.URLError as e:
+        logging.error(
+            f"URLError while fetching content from {page_url}: {e.reason}")
+        return [], None
+
+    # Get all video page links
+    links = [BASE_URL_RETRO + link.get('href')
+             for link in soup.find_all('a', class_='title-link')]
+
+    # Determine next page from the pagination list
+    current_page = soup.find('a', class_='pagination-link is-current')
+    if current_page:
+        try:
+            next_page_num = int(current_page.text) + 1
+            next_page_url = BASE_URL_RETRO + \
+                f'/commercials?page={next_page_num}'
+            logging.debug(
+                f"Next page determined using pagination list: {next_page_url}")
+        except ValueError:
+            logging.debug(
+                f"Could not determine next page from pagination list.")
+            next_page_url = None
+    else:
+        logging.debug(f"No next page found for URL: {page_url}")
+        next_page_url = None
+
+    return links, next_page_url
 
 
 def download_video(video_url, filename):
-    response = requests.get(video_url, headers=headers, stream=True)
-    with open(filename, 'wb') as file:
-        for chunk in response.iter_content(chunk_size=8192):
-            file.write(chunk)
+    logging.debug(f"Attempting to download from URL: {video_url}")
+
+    req = request.Request(video_url, headers=HEADERS)
+
+    try:
+        response = request.urlopen(req)
+        total_size = int(response.getheader('Content-Length', 0))
+
+        with open(filename, 'wb') as file:
+            for data in tqdm(iter(lambda: response.read(8192), b''),
+                             desc=f"Downloading {filename}", total=total_size//8192, unit="KB"):
+                file.write(data)
+        logging.debug(f"Downloaded {filename} successfully.")
+    except error.HTTPError as e:
+        logging.error(
+            f"HTTPError while downloading {video_url}: {e.code} {e.reason}")
+    except error.URLError as e:
+        logging.error(f"URLError while downloading {video_url}: {e.reason}")
+
+
+def get_aired_decade(soup):
+    aired_divs = soup.find_all('div')  # Get all div elements
+
+    for div in aired_divs:
+        if 'Aired:' in div.get_text():
+            year_text = div.get_text().replace('Aired:', '').strip().replace('"', '')
+
+            try:
+                year = int(year_text)
+                return str(year // 10 * 10) + 's'  # E.g., 1986 becomes 1980s
+            except ValueError:
+                continue
+
+    return None
 
 
 def scraper():
-    links = get_video_page_links()
+    next_page_url = BASE_URL_RETRO + '/commercials'
 
-    for link in links:
-        logging.info(f"Processing link: {link}")
-        response = requests.get(link, headers=headers)
-        soup = BeautifulSoup(response.content, 'html.parser')
+    while next_page_url:
+        links, next_page_url = get_video_page_links(next_page_url)
 
-        # Extract video title (you might need to adjust this logic)
-        video_title = os.path.basename(link)
+        for link in links:
+            req = request.Request(link, headers=HEADERS)
+            try:
+                response = request.urlopen(req)
+                soup = BeautifulSoup(response.read(), 'html.parser')
 
-        # Extract aired date
-        aired_data = soup.find('div', text=re.compile(
-            'Aired:')).next_sibling.strip()
-        decade = aired_data[:3] + '0s'
+                # Extracting aired decade
+                decade = get_aired_decade(soup)
+                if not decade:
+                    logging.warning(
+                        f"Could not determine aired decade for link: {link}")
+                    continue
 
-        # Construct directory path
-        decade_dir = os.path.join(DOWNLOAD_DIR, decade)
-        if not os.path.exists(decade_dir):
-            os.makedirs(decade_dir)
+                # Creating a directory for the decade if it doesn't exist
+                decade_dir = os.path.join(DOWNLOAD_DIR, decade)
+                os.makedirs(decade_dir, exist_ok=True)
 
-        # Check if file already exists
-        filepath = os.path.join(decade_dir, video_title + '.mp4')
-        if os.path.exists(filepath):
-            logging.info(f"File {filepath} already exists. Skipping.")
-            continue
+                video_title = link.split('/')[-1]
+                video_source_tag = soup.find('source', type='video/mp4')
 
-        # Locate the video file link
-        # Note: This logic is a placeholder, you'll need to update this part
-        video_link = soup.find('video_tag_or_logic_to_find_link').get('src')
+                if video_source_tag:
+                    video_link = video_source_tag.get('src')
+                    filepath = os.path.join(decade_dir, video_title + '.mp4')
 
-        # Download the video
-        download_video(video_link, filepath)
-        logging.info(f"Downloaded video to {filepath}")
+                    if os.path.exists(filepath):
+                        logging.info(
+                            f"File {filepath} already exists. Skipping.")
+                        continue
 
-        # Implement rate-limiting logic
-        sleep(5)
+                    download_video(video_link, filepath)
+                    sleep(15)
+                else:
+                    logging.warning(f"No video source found for link: {link}")
+            except error.HTTPError as e:
+                logging.error(
+                    f"HTTPError while processing link {link}: {e.code} {e.reason}")
+            except error.URLError as e:
+                logging.error(
+                    f"URLError while processing link {link}: {e.reason}")
 
 
-scraper()
+if __name__ == "__main__":
+    if args.source == "retrojunk":
+        scraper_retrojunk()
+    elif args.source == "archive":
+        scraper_archive()
