@@ -1,11 +1,14 @@
 import requests
 import csv
 import re
+import os
+from dotenv import load_dotenv
 
-# Splunk API information
+# Set variables
+load_dotenv()  # take environment variables from .env
 splunk_host = "<your-splunk-instance>"
-splunk_username = "<your-username>"
-splunk_password = "<your-password>"
+splunk_username = os.getenv('username')
+splunk_password = os.getenv('password')
 splunk_app = "<your-app>"
 
 # API endpoints

@@ -11,8 +11,8 @@ from time import sleep
 
 # Define the names of organizations to analyze and your API key
 load_dotenv()  # take environment variables from .env.
-api_key = os.getenv('API_KEY')
-org_names = ['slaclab', 'slac-chef']
+api_key = os.getenv('api_key')
+org_names = ['example1', 'example2']
 outputfile = 'cicd_report.xlsx'
 # Set this to true if you want to download and save CI/CD configuration files
 dump_cicd_configs = True

@@ -6,19 +6,17 @@ from time import sleep
 import logging
 from tqdm import tqdm
 
-BASE_URL_RETRO = 'https://www.retrojunk.com'
-BASE_URL_ARCHIVE = 'https://archive.org/search?query=subject%3A%22'
-COUNTRY = 'japan'  # Change this as needed
-DOWNLOAD_DIR = os.path.join(
-    '/home/pestilence/striped/media/commercials', COUNTRY)
-HEADERS = {
+base_url_retro = 'https://www.retrojunk.com'
+base_url_archive = 'https://archive.org/search?query=subject%3A%22'
+country = 'japan'
+download_dir = os.path.join('./commercials', country)
+headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.107 Safari/537.36'
 }
 
-# Initialize logging
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s - %(levelname)s - %(message)s')
-# Argument parsing
+
 parser = argparse.ArgumentParser(description='Scraper for commercials')
 parser.add_argument('--source', choices=['retrojunk', 'archive'],
                     required=True, help='Specify the source website for scraping')
@@ -27,7 +25,7 @@ args = parser.parse_args()
 
 def get_video_page_links(page_url):
     logging.debug(f"Fetching content from URL: {page_url}")
-    req = request.Request(page_url, headers=HEADERS)
+    req = request.Request(page_url, headers=headers)
 
     try:
         response = request.urlopen(req)
@@ -43,42 +41,35 @@ def get_video_page_links(page_url):
             f"URLError while fetching content from {page_url}: {e.reason}")
         return [], None
 
-    # Get all video page links
-    links = [BASE_URL_RETRO + link.get('href')
+    links = [base_url_retro + link.get('href')
              for link in soup.find_all('a', class_='title-link')]
-
-    # Determine next page from the pagination list
     current_page = soup.find('a', class_='pagination-link is-current')
+    next_page_url = None
+
     if current_page:
         try:
             next_page_num = int(current_page.text) + 1
-            next_page_url = BASE_URL_RETRO + \
+            next_page_url = base_url_retro + \
                 f'/commercials?page={next_page_num}'
             logging.debug(
                 f"Next page determined using pagination list: {next_page_url}")
         except ValueError:
             logging.debug(
-                f"Could not determine next page from pagination list.")
-            next_page_url = None
-    else:
-        logging.debug(f"No next page found for URL: {page_url}")
-        next_page_url = None
+                "Could not determine next page from pagination list.")
 
     return links, next_page_url
 
 
 def download_video(video_url, filename):
     logging.debug(f"Attempting to download from URL: {video_url}")
-
-    req = request.Request(video_url, headers=HEADERS)
+    req = request.Request(video_url, headers=headers)
 
     try:
         response = request.urlopen(req)
         total_size = int(response.getheader('Content-Length', 0))
 
         with open(filename, 'wb') as file:
-            for data in tqdm(iter(lambda: response.read(8192), b''),
-                             desc=f"Downloading {filename}", total=total_size//8192, unit="KB"):
+            for data in tqdm(iter(lambda: response.read(8192), b''), desc=f"Downloading {filename}", total=total_size//8192, unit="KB"):
                 file.write(data)
         logging.debug(f"Downloaded {filename} successfully.")
     except error.HTTPError as e:
@@ -89,7 +80,7 @@ def download_video(video_url, filename):
 
 
 def get_aired_decade(soup):
-    aired_divs = soup.find_all('div')  # Get all div elements
+    aired_divs = soup.find_all('div')
 
     for div in aired_divs:
         if 'Aired:' in div.get_text():
@@ -97,7 +88,7 @@ def get_aired_decade(soup):
 
             try:
                 year = int(year_text)
-                return str(year // 10 * 10) + 's'  # E.g., 1986 becomes 1980s
+                return str(year // 10 * 10) + 's'
             except ValueError:
                 continue
 
@@ -105,26 +96,24 @@ def get_aired_decade(soup):
 
 
 def scraper():
-    next_page_url = BASE_URL_RETRO + '/commercials'
+    next_page_url = base_url_retro + '/commercials'
 
     while next_page_url:
         links, next_page_url = get_video_page_links(next_page_url)
 
         for link in links:
-            req = request.Request(link, headers=HEADERS)
+            req = request.Request(link, headers=headers)
             try:
                 response = request.urlopen(req)
                 soup = BeautifulSoup(response.read(), 'html.parser')
-
-                # Extracting aired decade
                 decade = get_aired_decade(soup)
+
                 if not decade:
                     logging.warning(
                         f"Could not determine aired decade for link: {link}")
                     continue
 
-                # Creating a directory for the decade if it doesn't exist
-                decade_dir = os.path.join(DOWNLOAD_DIR, decade)
+                decade_dir = os.path.join(download_dir, decade)
                 os.makedirs(decade_dir, exist_ok=True)
 
                 video_title = link.split('/')[-1]
@@ -151,8 +140,12 @@ def scraper():
                     f"URLError while processing link {link}: {e.reason}")
 
 
-if __name__ == "__main__":
+def run_scraper():
     if args.source == "retrojunk":
-        scraper_retrojunk()
+        scraper()
     elif args.source == "archive":
-        scraper_archive()
+        # Call the function for scraping archive.org here
+        pass
+
+
+run_scraper()

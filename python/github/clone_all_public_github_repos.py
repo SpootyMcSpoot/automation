@@ -1,11 +1,13 @@
 import os
 import logging
 from github import Github
+from dotenv import load_dotenv
 
-# Provide your personal access token
-token = ''
-# Provide your output directory
-output_dir = '/mnt/z/repo_dump'  # Default directory, change as needed
+
+# Set variables
+load_dotenv()  # take environment variables from .env
+token = os.getenv('token')
+output_dir = './repo_dump'
 
 
 def clone_repos_with_commits(token, output_dir):

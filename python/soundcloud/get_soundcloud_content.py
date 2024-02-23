@@ -4,7 +4,7 @@ import requests
 from bs4 import BeautifulSoup
 import logging
 import subprocess
-import glob 
+import glob
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -86,9 +86,10 @@ def track_already_downloaded(track_url, save_path):
     matching_files = glob.glob(os.path.join(save_path, f"{track_name}*"))
     return len(matching_files) > 0
 
+
 def download_soundcloud_content(url, directory, mode):
     logging.info(f"Starting download process for mode: {mode}.")
-    
+
     name = get_name_from_url(url)
     save_path = os.path.join(directory, name)
 
