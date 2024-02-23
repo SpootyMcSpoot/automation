@@ -1,15 +1,20 @@
 import requests
 import pandas as pd
 import threading
+from dotenv import load_dotenv
+import os
 
-API_KEY = "MY_API_KEY"
-ORG_NAME = "MY_ORG_NAME"
+
+# Set variables
+load_dotenv()  # take environment variables from .env
+api_key = os.getenv('api_key')
+org_name = "my_org_name"
 
 
 def get_repo_list():
-    url = f"https://api.github.com/orgs/{ORG_NAME}/repos"
+    url = f"https://api.github.com/orgs/{org_name}/repos"
     headers = {
-        "Authorization": f"Bearer {API_KEY}",
+        "Authorization": f"Bearer {api_key}",
         "Accept": "application/vnd.github.v3+json"
     }
 
@@ -20,13 +25,13 @@ def get_repo_list():
 
         repo_list = []
         for repo in repos:
-            repo_list.append({"owner": ORG_NAME, "name": repo["name"]})
+            repo_list.append({"owner": org_name, "name": repo["name"]})
 
         return repo_list
 
     except requests.exceptions.RequestException as e:
         print(
-            f"Error retrieving repository list for organization {ORG_NAME}: {e}")
+            f"Error retrieving repository list for organization {org_name}: {e}")
 
     return []
 
@@ -34,7 +39,7 @@ def get_repo_list():
 def get_commit_history(repo_owner, repo_name, commit_data):
     url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/commits"
     headers = {
-        "Authorization": f"Bearer {API_KEY}",
+        "Authorization": f"Bearer {api_key}",
         "Accept": "application/vnd.github.v3+json"
     }
 

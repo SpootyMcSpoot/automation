@@ -1,12 +1,16 @@
 import csv
 import requests
+from dotenv import load_dotenv
+import os
 
+
+# Set variables
+load_dotenv()  # take environment variables from .env
+api_key = os.getenv('api_key')
 # Example usage:
 repo_list = [
     {'owner': 'hashicorp', 'name': 'terraform-provider-aws'}
 ]
-
-api_key = "MY_API_KEY_HERE"
 headers = {
     "Authorization": f"Bearer {api_key}"
 }
@@ -51,7 +55,7 @@ def retrieve_commits_to_csv(repo_list, csv_file_path, headers):
                 commit_owner = commit['commit']['author']['name']
                 writer.writerow([f"{repo_owner}/{repo_name}", commit_sha,
                                 commit_message, commit_branch, commit_date, commit_owner])
-                
+
 
 retrieve_commits_to_csv(repo_list, csv_file_path, headers)
 

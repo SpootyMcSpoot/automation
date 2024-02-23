@@ -1,10 +1,14 @@
 from github import Github, GithubException
 import logging
 import csv
+import os
 from datetime import datetime, timedelta
+from dotenv import load_dotenv
 
-# Configuration and Variables
-access_token = ""
+
+# Set variables
+load_dotenv()  # take environment variables from .env
+access_token = os.getenv('token')
 organizations = [""]
 csv_file = 'active_users.csv'
 
